@@ -3,8 +3,6 @@ const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 
-const PHONE_NUMBER = "5562981573734";
-
 async function conectar() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
@@ -15,32 +13,22 @@ async function conectar() {
         browser: ['Bot Figurinhas Dedão', 'Chrome', '1.0'],
     });
 
-    sock.ev.on('connection.update', async (update) => {
+    sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-            console.log('QR Code gerado (caso precise):');
+            console.log('\n🔥 QR CODE GERADO!');
             qrcode.generate(qr, { small: true });
-        }
-
-        if (connection === 'connecting' || qr) {
-            try {
-                const code = await sock.requestPairingCode(PHONE_NUMBER);
-                console.log('\n🔑 CÓDIGO DE PAREAMENTO:');
-                console.log(code);
-                console.log('\nWhatsApp Business → Configurações → Dispositivos vinculados → "Conectar com número de telefone"');
-                console.log('Digite o código acima');
-            } catch (err) {
-                console.error('Erro ao gerar código:', err.message);
-            }
+            console.log('\nTire print ou copie esse QR e escaneie com o WhatsApp Business → Dispositivos vinculados');
         }
 
         if (connection === 'open') {
-            console.log('✅ Bot conectado com sucesso!');
+            console.log('✅ BOT CONECTADO COM SUCESSO!');
         }
 
         if (connection === 'close') {
-            if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
+            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            if (shouldReconnect) {
                 console.log('Reconectando...');
                 setTimeout(conectar, 5000);
             }
@@ -56,12 +44,11 @@ async function conectar() {
         const from = msg.key.remoteJid;
         const texto = (msg.message.conversation || msg.message.extendedTextMessage?.text || '').toLowerCase().trim();
 
-        if (!msg.message.imageMessage && !msg.message.videoMessage && 
-            !msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage && 
-            !msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage &&
-            texto !== '/s' && texto !== '/s2') {
-            return;
-        }
+        const isMedia = msg.message.imageMessage || msg.message.videoMessage ||
+                       msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage ||
+                       msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage;
+
+        if (!isMedia && texto !== '/s' && texto !== '/s2') return;
 
         console.log('📸 Criando sticker...');
 
