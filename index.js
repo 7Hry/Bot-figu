@@ -3,7 +3,7 @@ const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 
-const PHONE_NUMBER = "5562981573734";   // ← Seu número já colocado
+const PHONE_NUMBER = "5562981573734";   // Seu número
 
 async function conectar() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
@@ -23,29 +23,25 @@ async function conectar() {
             qrcode.generate(qr, { small: true });
         }
 
-        // Gera o código de pareamento
         if (connection === 'connecting' || qr) {
             try {
                 const code = await sock.requestPairingCode(PHONE_NUMBER);
-                console.log('\n🔑 CÓDIGO DE PAREAMENTO GERADO:');
+                console.log('\n🔑 CÓDIGO DE PAREAMENTO:');
                 console.log(code);
-                console.log('\nAgora faça isso no seu celular:');
-                console.log('1. Abra o WhatsApp Business');
-                console.log('2. Vá em Configurações → Dispositivos vinculados');
-                console.log('3. Toque em "Conectar com número de telefone"');
-                console.log('4. Digite o código acima (ex: AB12-CD34)');
+                console.log('\nAbra o WhatsApp Business → Configurações → Dispositivos vinculados → "Conectar com número de telefone"');
+                console.log('Digite o código acima');
             } catch (err) {
                 console.error('Erro ao gerar código:', err.message);
             }
         }
 
         if (connection === 'open') {
-            console.log('✅ Bot conectado com sucesso via código!');
+            console.log('✅ Bot conectado com sucesso!');
         }
 
         if (connection === 'close') {
             if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
-                console.log('Reconectando em 5 segundos...');
+                console.log('Reconectando...');
                 setTimeout(conectar, 5000);
             }
         }
@@ -53,7 +49,6 @@ async function conectar() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Criação de stickers
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message || msg.key.fromMe) return;
@@ -91,19 +86,12 @@ async function conectar() {
 
         } catch (err) {
             console.error(err);
-            await sock.sendMessage(from, { text: '❌ Erro ao criar sticker. Tente novamente.' });
+            await sock.sendMessage(from, { text: '❌ Erro ao criar sticker.' });
         }
     });
 }
 
-conectar();    });
-
-    sock.ev.on('creds.update', saveCreds);
-
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-        const msg = messages[0];
-        if (!msg.message || msg.key.fromMe) return;
-
+conectar();
         const from = msg.key.remoteJid;
         const texto = (msg.message.conversation || msg.message.extendedTextMessage?.text || '').toLowerCase().trim();
 
