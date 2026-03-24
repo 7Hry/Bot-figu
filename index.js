@@ -28,8 +28,7 @@ async function conectar() {
                 const code = await sock.requestPairingCode(PHONE_NUMBER);
                 console.log('\n🔑 CÓDIGO DE PAREAMENTO:');
                 console.log(code);
-                console.log('\nAbra o WhatsApp Business → Configurações → Dispositivos vinculados');
-                console.log('→ "Conectar com número de telefone"');
+                console.log('\nWhatsApp Business → Configurações → Dispositivos vinculados → "Conectar com número de telefone"');
                 console.log('Digite o código acima');
             } catch (err) {
                 console.error('Erro ao gerar código:', err.message);
@@ -42,7 +41,7 @@ async function conectar() {
 
         if (connection === 'close') {
             if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
-                console.log('Reconectando em 5 segundos...');
+                console.log('Reconectando...');
                 setTimeout(conectar, 5000);
             }
         }
@@ -50,7 +49,6 @@ async function conectar() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // ==================== CRIAÇÃO DE STICKERS ====================
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message || msg.key.fromMe) return;
@@ -58,13 +56,9 @@ async function conectar() {
         const from = msg.key.remoteJid;
         const texto = (msg.message.conversation || msg.message.extendedTextMessage?.text || '').toLowerCase().trim();
 
-        const isImage = msg.message.imageMessage;
-        const isVideo = msg.message.videoMessage;
-        const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-        const isQuotedImage = quoted?.imageMessage;
-        const isQuotedVideo = quoted?.videoMessage;
-
-        if (!isImage && !isVideo && !isQuotedImage && !isQuotedVideo &&
+        if (!msg.message.imageMessage && !msg.message.videoMessage && 
+            !msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage && 
+            !msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage &&
             texto !== '/s' && texto !== '/s2') {
             return;
         }
@@ -88,62 +82,7 @@ async function conectar() {
 
         } catch (err) {
             console.error(err);
-            await sock.sendMessage(from, { text: '❌ Erro ao criar sticker. Tente novamente.' });
-        }
-    });
-}
-
-conectar();            return;
-        }
-
-        const comando = texto.split(' ')[0];
-
-        console.log(`📸 Criando sticker - Modo: ${comando === '/s' ? 'ACHATADO' : 'NORMAL'}`);
-
-        try {
-            let buffer = await sock.downloadMediaMessage(msg);
-
-            let sharpInstance = sharp(buffer);
-
-            if (comando === '/s') {
-                // ACHATADO - estica forçadamente
-                sharpInstance = sharpInstance.resize({
-                    width: 512,
-                    height: 512,
-                    fit: 'fill',
-                    kernel: sharp.kernel.lanczos3,
-                    withoutEnlargement: false
-                });
-            } else {
-                // NORMAL (/s2) - mantém proporção
-                sharpInstance = sharpInstance.resize({
-                    width: 512,
-                    height: 512,
-                    fit: 'inside',
-                    kernel: sharp.kernel.lanczos3,
-                    withoutEnlargement: false
-                });
-            }
-
-            buffer = await sharpInstance
-                .webp({ quality: 85, effort: 5 })
-                .toBuffer();
-
-            const sticker = new Sticker(buffer, {
-                pack: 'Bot do',      // ← Correto
-                author: 'Dedão',     // ← Correto
-                type: StickerTypes.FULL,
-                categories: ['😎'],
-                quality: 80,
-            });
-
-            const stickerBuffer = await sticker.toBuffer();
-
-            await sock.sendMessage(from, { sticker: stickerBuffer }, { quoted: msg });
-
-        } catch (err) {
-            console.error(err);
-            await sock.sendMessage(from, { text: '❌ Erro ao criar sticker. Tente novamente.' });
+            await sock.sendMessage(from, { text: '❌ Erro ao criar sticker.' });
         }
     });
 }
