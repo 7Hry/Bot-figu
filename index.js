@@ -3,7 +3,7 @@ const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 
-const PHONE_NUMBER = "5562981573734";   // Seu número
+const PHONE_NUMBER = "5562981573734";
 
 async function conectar() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
@@ -28,7 +28,8 @@ async function conectar() {
                 const code = await sock.requestPairingCode(PHONE_NUMBER);
                 console.log('\n🔑 CÓDIGO DE PAREAMENTO:');
                 console.log(code);
-                console.log('\nAbra o WhatsApp Business → Configurações → Dispositivos vinculados → "Conectar com número de telefone"');
+                console.log('\nAbra o WhatsApp Business → Configurações → Dispositivos vinculados');
+                console.log('→ "Conectar com número de telefone"');
                 console.log('Digite o código acima');
             } catch (err) {
                 console.error('Erro ao gerar código:', err.message);
@@ -41,7 +42,7 @@ async function conectar() {
 
         if (connection === 'close') {
             if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
-                console.log('Reconectando...');
+                console.log('Reconectando em 5 segundos...');
                 setTimeout(conectar, 5000);
             }
         }
@@ -49,6 +50,7 @@ async function conectar() {
 
     sock.ev.on('creds.update', saveCreds);
 
+    // ==================== CRIAÇÃO DE STICKERS ====================
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message || msg.key.fromMe) return;
@@ -70,7 +72,7 @@ async function conectar() {
         console.log('📸 Criando sticker...');
 
         try {
-            let buffer = await sock.downloadMediaMessage(msg);
+            const buffer = await sock.downloadMediaMessage(msg);
 
             const sticker = new Sticker(buffer, {
                 pack: 'Bot do',
@@ -86,24 +88,12 @@ async function conectar() {
 
         } catch (err) {
             console.error(err);
-            await sock.sendMessage(from, { text: '❌ Erro ao criar sticker.' });
+            await sock.sendMessage(from, { text: '❌ Erro ao criar sticker. Tente novamente.' });
         }
     });
 }
 
-conectar();
-        const from = msg.key.remoteJid;
-        const texto = (msg.message.conversation || msg.message.extendedTextMessage?.text || '').toLowerCase().trim();
-
-        const isImage = msg.message.imageMessage;
-        const isVideo = msg.message.videoMessage;
-        const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-        const isQuotedImage = quoted?.imageMessage;
-        const isQuotedVideo = quoted?.videoMessage;
-
-        if (!isImage && !isVideo && !isQuotedImage && !isQuotedVideo &&
-            texto !== '/s' && texto !== '/s2' && !texto.startsWith('/s ') && !texto.startsWith('/s2 ')) {
-            return;
+conectar();            return;
         }
 
         const comando = texto.split(' ')[0];
